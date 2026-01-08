@@ -33,6 +33,7 @@ const memory = new ConversationMemory(20);
 const processedMessages = new Set();
 const MESSAGE_COOLDOWN = 5000; // 5 seconds between responses
 const lastResponseTime = new Map();
+let botId = null; // Store bot's WhatsApp ID after ready
 
 // Helper functions
 function shouldRespondToMessage(message, groupId) {
@@ -53,15 +54,11 @@ function shouldRespondToMessage(message, groupId) {
     return false;
   }
 
-  const body = message.body.toLowerCase();
-  const agentNameLower = AGENT_NAME.toLowerCase();
-
-  // Respond if mentioned by @tag or name
+  // Only respond when explicitly @mentioned
   const mentionedIds = message.mentionedIds || [];
-  const isMentioned = mentionedIds.length > 0; // If there are any mentions, check if it's us
-  const nameInMessage = body.includes(agentNameLower);
+  const isMentioned = botId && mentionedIds.includes(botId);
 
-  return isMentioned || nameInMessage;
+  return isMentioned;
 }
 
 async function handleMessage(message) {
@@ -78,8 +75,9 @@ async function handleMessage(message) {
     const senderName = contact.pushname || contact.name || 'Someone';
     const messageBody = message.body;
 
-    // Log incoming message
+    // Log incoming message with group ID for configuration
     console.log(`📩 [${chat.name}] ${senderName}: ${messageBody}`);
+    console.log(`   └─ Group ID: ${groupId}`);
 
     // Store message in memory
     memory.addMessage(groupId, senderName, messageBody);
@@ -130,8 +128,10 @@ client.on('qr', (qr) => {
 });
 
 client.on('ready', () => {
+  botId = client.info.wid._serialized;
   console.log('✅ Dale is ready and lurking in your groups!');
-  console.log(`📱 Responding to: @mentions and messages containing "${AGENT_NAME}"\n`);
+  console.log(`📱 Responding to: @mentions only`);
+  console.log(`🤖 Bot ID: ${botId}\n`);
 });
 
 client.on('authenticated', () => {
