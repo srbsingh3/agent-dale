@@ -55,12 +55,13 @@ function shouldRespondToMessage(message, groupId) {
     return false;
   }
 
-  // Only respond when explicitly @mentioned (text-based check for @AgentName)
+  // Respond when @mentioned or name appears (with or without @)
   const body = message.body.toLowerCase();
-  const mentionPattern = `@${AGENT_NAME.toLowerCase()}`;
-  const isMentioned = body.includes(mentionPattern);
+  const agentNameLower = AGENT_NAME.toLowerCase();
+  const hasMention = body.includes(`@${agentNameLower}`);
+  const hasName = body.includes(agentNameLower);
 
-  return isMentioned;
+  return hasMention || hasName;
 }
 
 async function handleMessage(message) {
