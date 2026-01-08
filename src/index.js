@@ -5,7 +5,8 @@ import dotenv from 'dotenv';
 import { DaleAgent } from './agent.js';
 import { ConversationMemory } from './memory.js';
 
-dotenv.config();
+dotenv.config(); // Load .env
+dotenv.config({ path: '.env.local', override: true }); // Load .env.local and override
 
 // Configuration
 const ANTHROPIC_API_KEY = process.env.ANTHROPIC_API_KEY;
@@ -54,9 +55,10 @@ function shouldRespondToMessage(message, groupId) {
     return false;
   }
 
-  // Only respond when explicitly @mentioned
-  const mentionedIds = message.mentionedIds || [];
-  const isMentioned = botId && mentionedIds.includes(botId);
+  // Only respond when explicitly @mentioned (text-based check for @AgentName)
+  const body = message.body.toLowerCase();
+  const mentionPattern = `@${AGENT_NAME.toLowerCase()}`;
+  const isMentioned = body.includes(mentionPattern);
 
   return isMentioned;
 }
@@ -78,6 +80,8 @@ async function handleMessage(message) {
     // Log incoming message with group ID for configuration
     console.log(`📩 [${chat.name}] ${senderName}: ${messageBody}`);
     console.log(`   └─ Group ID: ${groupId}`);
+    console.log(`   └─ Mentioned IDs: ${JSON.stringify(message.mentionedIds)}`);
+    console.log(`   └─ Bot ID: ${botId}`);
 
     // Store message in memory
     memory.addMessage(groupId, senderName, messageBody);
