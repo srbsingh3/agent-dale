@@ -78,6 +78,9 @@ async function handleMessage(message) {
     const senderName = contact.pushname || contact.name || 'Someone';
     const messageBody = message.body;
 
+    // Log incoming message
+    console.log(`📩 [${chat.name}] ${senderName}: ${messageBody}`);
+
     // Store message in memory
     memory.addMessage(groupId, senderName, messageBody);
 
@@ -106,6 +109,7 @@ async function handleMessage(message) {
 
     // Send response
     if (response) {
+      console.log(`\n📤 [${chat.name}] Dale: ${response}\n`);
       await chat.sendMessage(response);
       lastResponseTime.set(groupId, Date.now());
 
