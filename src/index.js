@@ -37,7 +37,7 @@ const lastResponseTime = new Map();
 let botId = null; // Store bot's WhatsApp ID after ready
 
 // Helper functions
-function shouldRespondToMessage(message, groupId) {
+async function shouldRespondToMessage(message, groupId) {
   // Don't respond to own messages
   if (message.fromMe) return false;
 
@@ -53,6 +53,18 @@ function shouldRespondToMessage(message, groupId) {
   // If ALLOWED_GROUP_IDS is set, only respond in those groups
   if (ALLOWED_GROUP_IDS.length > 0 && !ALLOWED_GROUP_IDS.includes(groupId)) {
     return false;
+  }
+
+  // Check if message is a reply to Dale
+  if (message.hasQuotedMsg) {
+    try {
+      const quotedMsg = await message.getQuotedMessage();
+      if (quotedMsg && quotedMsg.fromMe) {
+        return true; // Reply to Dale's message
+      }
+    } catch (error) {
+      console.error('Error fetching quoted message:', error);
+    }
   }
 
   // Respond when @mentioned or name appears (with or without @)
@@ -78,17 +90,38 @@ async function handleMessage(message) {
     const senderName = contact.pushname || contact.name || 'Someone';
     const messageBody = message.body;
 
+    // Check if message has a quoted message and fetch it
+    let quotedMessageInfo = null;
+    if (message.hasQuotedMsg) {
+      try {
+        const quotedMsg = await message.getQuotedMessage();
+        if (quotedMsg) {
+          const quotedContact = await quotedMsg.getContact();
+          const quotedSender = quotedContact.pushname || quotedContact.name || 'Someone';
+          quotedMessageInfo = {
+            sender: quotedMsg.fromMe ? AGENT_NAME : quotedSender,
+            body: quotedMsg.body
+          };
+        }
+      } catch (error) {
+        console.error('Error fetching quoted message for context:', error);
+      }
+    }
+
     // Log incoming message with group ID for configuration
     console.log(`📩 [${chat.name}] ${senderName}: ${messageBody}`);
     console.log(`   └─ Group ID: ${groupId}`);
     console.log(`   └─ Mentioned IDs: ${JSON.stringify(message.mentionedIds)}`);
     console.log(`   └─ Bot ID: ${botId}`);
+    if (quotedMessageInfo) {
+      console.log(`   └─ Replying to: ${quotedMessageInfo.sender}: ${quotedMessageInfo.body}`);
+    }
 
     // Store message in memory
     memory.addMessage(groupId, senderName, messageBody);
 
     // Check if we should respond
-    if (!shouldRespondToMessage(message, groupId)) {
+    if (!await shouldRespondToMessage(message, groupId)) {
       return;
     }
 
@@ -107,8 +140,13 @@ async function handleMessage(message) {
     // Get conversation context
     const context = memory.getContext(groupId, 10);
 
+    // Add quoted message info to context if present
+    const fullContext = quotedMessageInfo
+      ? `${context}\n\n[${senderName} is replying to: "${quotedMessageInfo.sender}: ${quotedMessageInfo.body}"]`
+      : context;
+
     // Generate response
-    const response = await daleAgent.respond(messageBody, context);
+    const response = await daleAgent.respond(messageBody, fullContext);
 
     // Send response
     if (response) {
@@ -135,7 +173,7 @@ client.on('qr', (qr) => {
 client.on('ready', () => {
   botId = client.info.wid._serialized;
   console.log('✅ Dale is ready and lurking in your groups!');
-  console.log(`📱 Responding to: @mentions only`);
+  console.log(`📱 Responding to: @mentions and replies to Dale's messages`);
   console.log(`🤖 Bot ID: ${botId}\n`);
 });
 
