@@ -100,7 +100,8 @@ async function handleMessage(message) {
           const quotedSender = quotedContact.pushname || quotedContact.name || 'Someone';
           quotedMessageInfo = {
             sender: quotedMsg.fromMe ? AGENT_NAME : quotedSender,
-            body: quotedMsg.body
+            body: quotedMsg.body,
+            isFromDale: quotedMsg.fromMe
           };
         }
       } catch (error) {
@@ -114,7 +115,7 @@ async function handleMessage(message) {
     console.log(`   └─ Mentioned IDs: ${JSON.stringify(message.mentionedIds)}`);
     console.log(`   └─ Bot ID: ${botId}`);
     if (quotedMessageInfo) {
-      console.log(`   └─ Replying to: ${quotedMessageInfo.sender}: ${quotedMessageInfo.body}`);
+      console.log(`   └─ Replying to ${quotedMessageInfo.sender}: "${quotedMessageInfo.body}"`);
     }
 
     // Store message in memory
@@ -140,10 +141,17 @@ async function handleMessage(message) {
     // Get conversation context
     const context = memory.getContext(groupId, 10);
 
-    // Add quoted message info to context if present
-    const fullContext = quotedMessageInfo
-      ? `${context}\n\n[${senderName} is replying to: "${quotedMessageInfo.sender}: ${quotedMessageInfo.body}"]`
-      : context;
+    // Build enhanced context with quoted message info
+    let fullContext = context;
+    if (quotedMessageInfo) {
+      if (quotedMessageInfo.isFromDale) {
+        // Someone is replying to Dale's message
+        fullContext = `${context}\n\n[IMPORTANT: ${senderName} is replying to YOUR previous message: "${quotedMessageInfo.body}"\nTheir reply: "${messageBody}"]`;
+      } else {
+        // Someone mentioned Dale while quoting another person's message
+        fullContext = `${context}\n\n[${senderName} quoted ${quotedMessageInfo.sender}'s message: "${quotedMessageInfo.body}"\nThen ${senderName} said: "${messageBody}"]`;
+      }
+    }
 
     // Generate response
     const response = await daleAgent.respond(messageBody, fullContext);
