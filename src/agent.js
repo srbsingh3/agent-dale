@@ -30,7 +30,8 @@ export class DaleAgent {
 
       return response.content[0].text.trim();
     } catch (error) {
-      console.error('Error generating response:', error);
+      // Log error type/message but not full stack trace with sensitive details
+      console.error('Error generating response:', error.message || 'Unknown error');
       return "Error processing that. My brain's buffering.";
     }
   }

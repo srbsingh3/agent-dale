@@ -12,6 +12,8 @@ dotenv.config({ path: '.env.local', override: true }); // Load .env.local and ov
 const ANTHROPIC_API_KEY = process.env.ANTHROPIC_API_KEY;
 const AGENT_NAME = process.env.AGENT_NAME || 'Dale';
 const ALLOWED_GROUP_IDS = process.env.ALLOWED_GROUP_IDS?.split(',').filter(Boolean) || [];
+const MAX_MESSAGE_LENGTH = 2000; // Prevent excessive API token usage
+const DEBUG_LOGGING = process.env.DEBUG === 'true'; // Only log sensitive info when DEBUG=true
 
 if (!ANTHROPIC_API_KEY) {
   console.error('Error: ANTHROPIC_API_KEY not found in .env file');
@@ -109,13 +111,17 @@ async function handleMessage(message) {
       }
     }
 
-    // Log incoming message with group ID for configuration
-    console.log(`📩 [${chat.name}] ${senderName}: ${messageBody}`);
-    console.log(`   └─ Group ID: ${groupId}`);
-    console.log(`   └─ Mentioned IDs: ${JSON.stringify(message.mentionedIds)}`);
-    console.log(`   └─ Bot ID: ${botId}`);
-    if (quotedMessageInfo) {
-      console.log(`   └─ Replying to ${quotedMessageInfo.sender}: "${quotedMessageInfo.body}"`);
+    // Log incoming message (sensitive details only in debug mode)
+    if (DEBUG_LOGGING) {
+      console.log(`📩 [${chat.name}] ${senderName}: ${messageBody}`);
+      console.log(`   └─ Group ID: ${groupId}`);
+      console.log(`   └─ Mentioned IDs: ${JSON.stringify(message.mentionedIds)}`);
+      console.log(`   └─ Bot ID: ${botId}`);
+      if (quotedMessageInfo) {
+        console.log(`   └─ Replying to ${quotedMessageInfo.sender}: "${quotedMessageInfo.body}"`);
+      }
+    } else {
+      console.log(`📩 [${chat.name}] Message received`);
     }
 
     // Store message in memory
@@ -141,6 +147,11 @@ async function handleMessage(message) {
     // Get conversation context
     const context = memory.getContext(groupId, 10);
 
+    // Truncate message if too long to prevent API abuse
+    const truncatedMessage = messageBody.length > MAX_MESSAGE_LENGTH
+      ? messageBody.slice(0, MAX_MESSAGE_LENGTH) + '... [truncated]'
+      : messageBody;
+
     // Build enhanced context with quoted message info
     let fullContext = context;
     if (quotedMessageInfo) {
@@ -154,11 +165,15 @@ async function handleMessage(message) {
     }
 
     // Generate response
-    const response = await daleAgent.respond(messageBody, fullContext);
+    const response = await daleAgent.respond(truncatedMessage, fullContext);
 
     // Send response
     if (response) {
-      console.log(`\n📤 [${chat.name}] Dale: ${response}\n`);
+      if (DEBUG_LOGGING) {
+        console.log(`\n📤 [${chat.name}] Dale: ${response}\n`);
+      } else {
+        console.log(`📤 [${chat.name}] Response sent`);
+      }
       await chat.sendMessage(response);
       lastResponseTime.set(groupId, Date.now());
 
