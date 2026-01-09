@@ -33,7 +33,7 @@ He'll respond. Whether you like it or not.
 
 ## Make Dale Your Own
 
-Edit `system-prompt.md` to tweak his personality. Make him nicer (boring), meaner (risky), or give him a pirate accent (chaotic). No code changes needed.
+Edit `SOUL.md` to tweak his personality. Make him nicer (boring), meaner (risky), or give him a pirate accent (chaotic). No code changes needed.
 
 ## Project Structure
 
