@@ -4,6 +4,8 @@
 
 Dale isn't your typical helpful assistant. He's the friend who roasts you with love, drops unsolicited opinions, and somehow makes your group chat 10x more entertaining.
 
+![Agent Dale in action](demo.png)
+
 ## What Makes Dale... Dale
 
 - Sarcastic wit that hits just right
