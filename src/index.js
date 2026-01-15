@@ -171,10 +171,10 @@ async function handleMessage(message) {
     if (response) {
       if (DEBUG_LOGGING) {
         console.log(`\n📤 [${chat.name}] Dale: ${response}\n`);
-      } else {
-        console.log(`📤 [${chat.name}] Response sent`);
       }
-      await chat.sendMessage(response);
+      // Use sendSeen: false to avoid markedUnread bug in whatsapp-web.js
+      await chat.sendMessage(response, { sendSeen: false });
+      console.log(`📤 [${chat.name}] Response sent`);
       lastResponseTime.set(groupId, Date.now());
 
       // Store Dale's response in memory too
